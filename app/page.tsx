@@ -5,80 +5,38 @@ import { useRouter } from "next/navigation"
 import { GraduationCap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FileUpload } from "@/components/file-upload"
-import { SubjectsPreview } from "@/components/subjects-preview"
+import { EditableSubjectsTable } from "@/components/editable-subjects-table" // Updated import
 import { mockSubjects } from "@/lib/constants"
-
-interface Subject {
-  id: string
-  name: string
-  year: number
-  workloadHours: number
-  correlatives?: string[]
-  status: SubjectStatus
-}
-
-type SubjectStatus = "Sin cursar" | "En curso" | "Aprobada" | "Promocionada"
-
-const statusColors = {
-  "Sin cursar": "bg-gray-100 text-gray-800 border-gray-200",
-  "En curso": "bg-blue-100 text-blue-800 border-blue-200",
-  Aprobada: "bg-green-100 text-green-800 border-green-200",
-  Promocionada: "bg-purple-100 text-purple-800 border-purple-200",
-}
-
-const statusIcons = {
-  "Sin cursar": "⏳",
-  "En curso": "📚",
-  Aprobada: "✅",
-  Promocionada: "🏆",
-}
+import type { Subject } from "@/types"
 
 export default function HomePage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects)
-  const [filter, setFilter] = useState<"all" | "approved" | "pending" | "in-progress">("all")
+  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects) // State for subjects
   const router = useRouter()
 
   const handleFileUpload = (file: File) => {
     setUploadedFile(file)
-    // Here you would typically send the file to your API
-    // const formData = new FormData()
-    // formData.append('file', file)
-    // await fetch('/api/upload', { method: 'POST', body: formData })
+    // In a real app, you'd send the file to your API for processing
+    // and then update the 'subjects' state with the extracted data.
+    // For now, we'll keep using mockSubjects after upload for demonstration.
+    // Example: fetch('/api/upload', { method: 'POST', body: formData }).then(res => res.json()).then(data => setSubjects(data.subjects))
   }
 
   const handleFileRemove = () => {
     setUploadedFile(null)
+    // Optionally reset subjects if file is removed
+    // setSubjects([])
+  }
+
+  const handleUpdateSubjects = (updatedSubjects: Subject[]) => {
+    setSubjects(updatedSubjects)
   }
 
   const handleContinue = () => {
-    // Here you would typically save the career data to your backend
-    // and then redirect to the dashboard
+    // In a real app, you'd save the final 'subjects' data to your backend
+    // await fetch('/api/career-plan', { method: 'POST', body: JSON.stringify({ subjects }) })
     router.push("/dashboard")
   }
-
-  const updateSubjectStatus = (subjectId: string, newStatus: SubjectStatus) => {
-    setSubjects((prev) =>
-      prev.map((subject) => (subject.id === subjectId ? { ...subject, status: newStatus } : subject)),
-    )
-  }
-
-  const filteredSubjects = subjects.filter((subject) => {
-    switch (filter) {
-      case "approved":
-        return subject.status === "Aprobada" || subject.status === "Promocionada"
-      case "pending":
-        return subject.status === "Sin cursar"
-      case "in-progress":
-        return subject.status === "En curso"
-      default:
-        return true
-    }
-  })
-
-  const completedSubjects = subjects.filter((s) => s.status === "Aprobada" || s.status === "Promocionada").length
-  const progressPercentage = Math.round((completedSubjects / subjects.length) * 100)
-  const estimatedSemesters = Math.ceil((subjects.length - completedSubjects) / 4)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -91,14 +49,15 @@ export default function HomePage() {
 
         <FileUpload onFileUpload={handleFileUpload} uploadedFile={uploadedFile} onFileRemove={handleFileRemove} />
 
-        {uploadedFile && <SubjectsPreview subjects={mockSubjects} />}
-
         {uploadedFile && (
-          <div className="text-center">
-            <Button onClick={handleContinue} size="lg" className="bg-indigo-600 hover:bg-indigo-700">
-              Continuar al Dashboard
-            </Button>
-          </div>
+          <>
+            <EditableSubjectsTable subjects={subjects} onUpdateSubjects={handleUpdateSubjects} />
+            <div className="text-center">
+              <Button onClick={handleContinue} size="lg" className="bg-indigo-600 hover:bg-indigo-700">
+                Continuar al Dashboard
+              </Button>
+            </div>
+          </>
         )}
       </div>
     </div>

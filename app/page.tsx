@@ -25,13 +25,15 @@ export default function HomePage() {
     formData.append("file", file)
 
     // util interno
+    // Lee el cuerpo una sola vez para evitar “body stream already read”
     const parseErrorResponse = async (res: Response) => {
+      const raw = await res.text() // stream se consume aquí
       try {
-        const data = await res.json()
+        const data = JSON.parse(raw)
         return data?.error || data?.message || res.statusText
       } catch {
-        const text = await res.text()
-        return text || "Error inesperado del servidor."
+        // No era JSON válido → devolvemos el texto crudo
+        return raw || res.statusText
       }
     }
 

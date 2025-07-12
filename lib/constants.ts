@@ -1,4 +1,4 @@
-import type { Subject } from "@/types"
+import type { Subject, SubjectStatus } from "@/types"
 
 export const mockSubjects: Subject[] = [
   { id: "1", name: "Análisis Matemático I", year: 1, workloadHours: 120, status: "Aprobada" },
@@ -46,14 +46,14 @@ export const mockSubjects: Subject[] = [
   },
 ]
 
-export const statusColors = {
+export const statusColors: Record<SubjectStatus, string> = {
   "Sin cursar": "bg-gray-100 text-gray-800 border-gray-200",
   "En curso": "bg-blue-100 text-blue-800 border-blue-200",
   Aprobada: "bg-green-100 text-green-800 border-green-200",
   Promocionada: "bg-purple-100 text-purple-800 border-purple-200",
 }
 
-export const statusIcons = {
+export const statusIcons: Record<SubjectStatus, string> = {
   "Sin cursar": "⏳",
   "En curso": "📚",
   Aprobada: "✅",

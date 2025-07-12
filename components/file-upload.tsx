@@ -1,9 +1,10 @@
+// components/file-upload.tsx
 "use client"
 
 import type React from "react"
 
 import { useState } from "react"
-import { Upload, FileText, X } from "lucide-react"
+import { Upload, FileText, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -11,9 +12,11 @@ interface FileUploadProps {
   onFileUpload: (file: File) => void
   uploadedFile: File | null
   onFileRemove: () => void
+  isLoading: boolean
+  error: string | null
 }
 
-export function FileUpload({ onFileUpload, uploadedFile, onFileRemove }: FileUploadProps) {
+export function FileUpload({ onFileUpload, uploadedFile, onFileRemove, isLoading, error }: FileUploadProps) {
   const [dragActive, setDragActive] = useState(false)
 
   const handleDrag = (e: React.DragEvent) => {
@@ -35,6 +38,8 @@ export function FileUpload({ onFileUpload, uploadedFile, onFileRemove }: FileUpl
       const file = e.dataTransfer.files[0]
       if (file.type === "application/pdf") {
         onFileUpload(file)
+      } else {
+        alert("Por favor, sube un archivo PDF.")
       }
     }
   }
@@ -44,6 +49,8 @@ export function FileUpload({ onFileUpload, uploadedFile, onFileRemove }: FileUpl
       const file = e.target.files[0]
       if (file.type === "application/pdf") {
         onFileUpload(file)
+      } else {
+        alert("Por favor, sube un archivo PDF.")
       }
     }
   }
@@ -67,13 +74,19 @@ export function FileUpload({ onFileUpload, uploadedFile, onFileRemove }: FileUpl
               : uploadedFile
                 ? "border-green-500 bg-green-50"
                 : "border-gray-300 hover:border-indigo-400"
-          }`}
+          } ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
-          {uploadedFile ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center">
+              <Loader2 className="w-12 h-12 mx-auto mb-4 text-indigo-600 animate-spin" />
+              <p className="text-lg font-medium text-gray-700 mb-2">Procesando PDF...</p>
+              <p className="text-gray-500">Esto puede tardar unos segundos.</p>
+            </div>
+          ) : uploadedFile ? (
             <div className="flex items-center justify-center gap-3">
               <FileText className="w-8 h-8 text-green-600" />
               <div>
@@ -103,6 +116,7 @@ export function FileUpload({ onFileUpload, uploadedFile, onFileRemove }: FileUpl
             </div>
           )}
         </div>
+        {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
       </CardContent>
     </Card>
   )

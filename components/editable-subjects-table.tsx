@@ -1,3 +1,4 @@
+// components/editable-subjects-table.tsx
 "use client"
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,6 +29,10 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
   })
 
   const handleAddSubject = () => {
+    if (!newSubjectData.name) {
+      alert("El nombre de la materia es requerido.")
+      return
+    }
     const newId = String(Date.now())
     const updatedSubjects = [
       ...subjects,
@@ -45,6 +50,10 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
 
   const handleEditSubject = () => {
     if (currentSubject) {
+      if (!currentSubject.name) {
+        alert("El nombre de la materia es requerido.")
+        return
+      }
       const updatedSubjects = subjects.map((sub) =>
         sub.id === currentSubject.id
           ? { ...currentSubject, correlatives: currentSubject.correlatives?.filter(Boolean) || [] }
@@ -57,14 +66,16 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
   }
 
   const handleDeleteSubject = (id: string) => {
-    const updatedSubjects = subjects.filter((sub) => sub.id !== id)
-    onUpdateSubjects(updatedSubjects)
+    if (window.confirm("¿Estás seguro de que quieres eliminar esta materia?")) {
+      const updatedSubjects = subjects.filter((sub) => sub.id !== id)
+      onUpdateSubjects(updatedSubjects)
+    }
   }
 
   return (
     <Card className="mb-6">
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
             <CardTitle>Materias de la Carrera</CardTitle>
             <CardDescription>Revisá y editá las materias extraídas. Podés añadir nuevas si faltan.</CardDescription>
@@ -90,6 +101,7 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
                     value={newSubjectData.name}
                     onChange={(e) => setNewSubjectData({ ...newSubjectData, name: e.target.value })}
                     className="col-span-3"
+                    required
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -104,6 +116,7 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
                       setNewSubjectData({ ...newSubjectData, year: Number.parseInt(e.target.value) || 1 })
                     }
                     className="col-span-3"
+                    min="1"
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -118,6 +131,7 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
                       setNewSubjectData({ ...newSubjectData, workloadHours: Number.parseInt(e.target.value) || 0 })
                     }
                     className="col-span-3"
+                    min="0"
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -163,7 +177,7 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
               {subjects.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                    No hay materias cargadas. ¡Agregá la primera!
+                    No hay materias cargadas. ¡Sube un PDF o agrega la primera!
                   </TableCell>
                 </TableRow>
               ) : (
@@ -206,6 +220,7 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
                                   value={currentSubject.name}
                                   onChange={(e) => setCurrentSubject({ ...currentSubject, name: e.target.value })}
                                   className="col-span-3"
+                                  required
                                 />
                               </div>
                               <div className="grid grid-cols-4 items-center gap-4">
@@ -220,6 +235,7 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
                                     setCurrentSubject({ ...currentSubject, year: Number.parseInt(e.target.value) || 1 })
                                   }
                                   className="col-span-3"
+                                  min="1"
                                 />
                               </div>
                               <div className="grid grid-cols-4 items-center gap-4">
@@ -237,6 +253,7 @@ export function EditableSubjectsTable({ subjects, onUpdateSubjects }: EditableSu
                                     })
                                   }
                                   className="col-span-3"
+                                  min="0"
                                 />
                               </div>
                               <div className="grid grid-cols-4 items-center gap-4">

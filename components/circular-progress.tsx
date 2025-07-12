@@ -1,3 +1,4 @@
+// components/circular-progress.tsx
 import type { Subject } from "@/types"
 
 interface CircularProgressProps {
@@ -20,7 +21,7 @@ export function CircularProgress({ subjects, size = 220 }: CircularProgressProps
 
   const total = subjects.length
   const completedCount = statusCounts["Promocionada"] + statusCounts["Aprobada"]
-  const completedPercentage = Math.round((completedCount / total) * 100)
+  const completedPercentage = total > 0 ? Math.round((completedCount / total) * 100) : 0
 
   // Calculate angles for each segment
   const segments = [
@@ -41,7 +42,7 @@ export function CircularProgress({ subjects, size = 220 }: CircularProgressProps
 
           {/* Progress segments */}
           {segments.map((segment, index) => {
-            if (segment.count === 0) return null
+            if (segment.count === 0 || total === 0) return null
 
             const segmentAngle = (segment.count / total) * 360
             const strokeDasharray = `${(segmentAngle / 360) * circumference} ${circumference}`

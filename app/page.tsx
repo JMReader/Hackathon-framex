@@ -1,3 +1,4 @@
+// app/page.tsx
 "use client"
 
 import { useState } from "react"
@@ -5,27 +6,57 @@ import { useRouter } from "next/navigation"
 import { GraduationCap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FileUpload } from "@/components/file-upload"
-import { EditableSubjectsTable } from "@/components/editable-subjects-table" // Updated import
-import { mockSubjects } from "@/lib/constants"
+import { EditableSubjectsTable } from "@/components/editable-subjects-table"
 import type { Subject } from "@/types"
 
 export default function HomePage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects) // State for subjects
+  const [subjects, setSubjects] = useState<Subject[]>([]) // Start with empty subjects
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     setUploadedFile(file)
-    // In a real app, you'd send the file to your API for processing
-    // and then update the 'subjects' state with the extracted data.
-    // For now, we'll keep using mockSubjects after upload for demonstration.
-    // Example: fetch('/api/upload', { method: 'POST', body: formData }).then(res => res.json()).then(data => setSubjects(data.subjects))
+    setIsLoading(true)
+    setError(null)
+
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Error al procesar el PDF.")
+      }
+
+      const data = await response.json()
+      // Assign unique IDs and default status to extracted subjects
+      const extractedSubjectsWithIds: Subject[] = data.subjects.map((sub: Omit<Subject, "id" | "status">) => ({
+        id: String(Date.now()) + Math.random().toString(36).substring(2, 9), // Simple unique ID
+        status: "Sin cursar",
+        ...sub,
+      }))
+      setSubjects(extractedSubjectsWithIds)
+    } catch (err: any) {
+      console.error("Error uploading file:", err)
+      setError(err.message || "Ocurrió un error inesperado al subir el archivo.")
+      setSubjects([]) // Clear subjects on error
+      setUploadedFile(null) // Clear uploaded file on error
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleFileRemove = () => {
     setUploadedFile(null)
-    // Optionally reset subjects if file is removed
-    // setSubjects([])
+    setSubjects([]) // Clear subjects when file is removed
+    setError(null)
   }
 
   const handleUpdateSubjects = (updatedSubjects: Subject[]) => {
@@ -44,12 +75,18 @@ export default function HomePage() {
         <div className="text-center mb-8 pt-8">
           <GraduationCap className="w-16 h-16 mx-auto mb-4 text-indigo-600" />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Seguimiento Académico</h1>
-          <p className="text-gray-600">Cargá tu plan de estudios para comenzar a trackear tu progreso</p>
+          <p className="text-gray-600">Cargá el plan de estudios de tu carrera en PDF</p>
         </div>
 
-        <FileUpload onFileUpload={handleFileUpload} uploadedFile={uploadedFile} onFileRemove={handleFileRemove} />
+        <FileUpload
+          onFileUpload={handleFileUpload}
+          uploadedFile={uploadedFile}
+          onFileRemove={handleFileRemove}
+          isLoading={isLoading}
+          error={error}
+        />
 
-        {uploadedFile && (
+        {uploadedFile && !isLoading && subjects.length > 0 && (
           <>
             <EditableSubjectsTable subjects={subjects} onUpdateSubjects={handleUpdateSubjects} />
             <div className="text-center">
@@ -58,6 +95,12 @@ export default function HomePage() {
               </Button>
             </div>
           </>
+        )}
+
+        {uploadedFile && !isLoading && subjects.length === 0 && !error && (
+          <div className="text-center py-8 text-gray-500">
+            <p>No se pudieron extraer materias del PDF. Por favor, revisa el archivo o agrégalas manualmente.</p>
+          </div>
         )}
       </div>
     </div>

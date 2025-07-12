@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 "use client"
 
 import { useState } from "react"
@@ -7,11 +8,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CircularProgress } from "@/components/circular-progress"
 import { SubjectList } from "@/components/subject-list"
-import { mockSubjects } from "@/lib/constants"
+import { mockSubjects } from "@/lib/constants" // Still using mock for dashboard for now
 import type { Subject, SubjectStatus } from "@/types"
 
 export default function DashboardPage() {
-  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects)
+  // In a real app, you'd fetch subjects from your backend here
+  // const [subjects, setSubjects] = useState<Subject[]>([]);
+  // useEffect(() => {
+  //   fetch('/api/subjects').then(res => res.json()).then(data => setSubjects(data.subjects));
+  // }, []);
+  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects) // Using mock for demo
+
   const router = useRouter()
 
   const updateSubjectStatus = (subjectId: string, newStatus: SubjectStatus) => {

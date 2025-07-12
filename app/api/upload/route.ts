@@ -5,88 +5,84 @@ import { generateObject } from "ai"
 import { z } from "zod"
 import { ExtractedSubjectsSchema } from "@/types"
 
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs"
+export const runtime = "nodejs" // pdf parsing needs Buffer APIs
 
-// pdfjs necesita saber dónde está su worker; en server-side podemos desactivarlo.
-GlobalWorkerOptions.workerSrc = undefined
-
-export const runtime = "nodejs" // Necesitamos Buffer
-
-/** Extrae el texto completo de un PDF (máx 25 páginas para no exceder tokens) */
+/**
+ * Extract all visible text from a PDF buffer.
+ * We dynamically import pdfjs-dist to avoid bundler / ESM issues.
+ */
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  const loadingTask = getDocument({ data: buffer })
-  const pdf = await loadingTask.promise
-  const totalPages = Math.min(pdf.numPages, 25)
+  // Dynamic import so the module is only evaluated in the Node runtime
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.js")
+  // Disable worker usage on the server
+  pdfjs.GlobalWorkerOptions.workerSrc = undefined
 
-  let fullText = ""
-  for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
-    const page = await pdf.getPage(pageNumber)
+  const pdf = await pdfjs.getDocument({ data: buffer }).promise
+  const pages = Math.min(pdf.numPages, 30) // read max 30 pages
+  let text = ""
+  for (let i = 1; i <= pages; i++) {
+    const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    const strings = content.items.map((it: any) => it.str)
-    fullText += strings.join(" ") + "\n"
+    text += content.items.map((it: any) => it.str).join(" ") + "\n"
   }
   await pdf.destroy()
-  return fullText
+  return text
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
+    if (!process.env.GROQ_API_KEY) {
+      return NextResponse.json({ error: "La variable GROQ_API_KEY no está configurada." }, { status: 500 })
+    }
+
+    const formData = await request.formData({ size: 2_000_000 }) // 2 MB safety limit
     const file = formData.get("file") as File | null
 
     if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 })
+      return NextResponse.json({ error: "No se recibió archivo." }, { status: 400 })
     }
     if (file.type !== "application/pdf") {
       return NextResponse.json({ error: "Solo se admiten archivos PDF." }, { status: 400 })
     }
 
-    // Buffer del PDF
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    // 1. Extraer texto
+    // 1 – extraer texto del PDF
     const pdfText = await extractTextFromPdf(buffer)
     if (pdfText.trim().length < 50) {
-      return NextResponse.json({ error: "El PDF no contiene texto suficiente para analizar." }, { status: 400 })
+      return NextResponse.json({ error: "El PDF no contiene suficiente texto legible para analizar." }, { status: 400 })
     }
 
-    // 2. Enviar texto al LLM (Groq) para estructurarlo
-    const result = await generateObject({
+    // 2 – enviar a Groq para estructurar las materias
+    const llmResponse = await generateObject({
       model: groq("llama3-8b-8192"),
       schema: ExtractedSubjectsSchema,
-      prompt: `Eres un asistente experto en planes de estudio universitarios. 
-Extrae las materias con esta estructura:
+      prompt: `Eres un asistente experto en planes de estudio universitarios.
+Devuelve UN OBJETO JSON con una clave "subjects" que sea array de materias:
+name (string), year (number), workloadHours (number), correlatives (array string).
 
-{
-  "subjects": [
-    { "name": "...", "year": 1, "workloadHours": 0, "correlatives": [] }
-  ]
-}
-
-Texto del PDF (puede estar desordenado, tú lo interpretas):
+Texto del PDF:
 """
 ${pdfText}
 """`,
     })
 
-    const extracted = ExtractedSubjectsSchema.parse(result.object)
+    const parsed = ExtractedSubjectsSchema.parse(llmResponse.object)
 
     return NextResponse.json(
       {
-        message: "Materias extraídas correctamente",
+        message: "Materias extraídas correctamente.",
         filename: file.name,
-        subjects: extracted.subjects,
+        subjects: parsed.subjects,
       },
       { status: 200 },
     )
   } catch (err: any) {
-    console.error("UPLOAD ERROR →", err)
+    // Log completo en consola para depuración
+    console.error("UPLOAD /api/upload error →", err)
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: "Formato devuelto por la IA inválido", details: err.errors }, { status: 422 })
+      return NextResponse.json({ error: "Formato devuelto por la IA inválido.", details: err.errors }, { status: 422 })
     }
-    return NextResponse.json(
-      { error: "Fallo interno al procesar el PDF. Revisa el log del servidor." },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: err.message || "Fallo interno desconocido." }, { status: 500 })
   }
 }

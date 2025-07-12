@@ -24,6 +24,17 @@ export default function HomePage() {
     const formData = new FormData()
     formData.append("file", file)
 
+    // util interno
+    const parseErrorResponse = async (res: Response) => {
+      try {
+        const data = await res.json()
+        return data?.error || data?.message || res.statusText
+      } catch {
+        const text = await res.text()
+        return text || "Error inesperado del servidor."
+      }
+    }
+
     try {
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -31,8 +42,8 @@ export default function HomePage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Error al procesar el PDF.")
+        const msg = await parseErrorResponse(response)
+        throw new Error(msg)
       }
 
       const data = await response.json()

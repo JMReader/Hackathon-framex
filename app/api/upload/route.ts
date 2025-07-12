@@ -6,6 +6,9 @@ import { z } from "zod"
 import pdfParse from "pdf-parse"
 import { ExtractedSubjectsSchema } from "@/types" // Import the Zod schema
 
+// Necesitamos el runtime Node porque pdf-parse usa APIs de Node.js
+export const runtime = "nodejs"
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
